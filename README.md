@@ -14,9 +14,7 @@ Password Remover
 
 ## 图像处理
 
-1. 福昕拆分成图片
-2. 用python(enhance.py)完成图像处理
-3. 福昕合并
+使用enhance.py可以自动完成pdf文件拆分、图像处理以及合并
 
 ## pdf转各种文档
 
