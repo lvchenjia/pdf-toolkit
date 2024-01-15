@@ -1,38 +1,49 @@
+import fitz
 from PIL import Image, ImageEnhance
-import os
 
-def darken_and_increase_contrast(image_path, output_path, factor=1, contrast_factor=1.5):
-    # 打开图像
-    img = Image.open(image_path)
+def pdf_to_images(pdf_path, resolution=300):
+    pdf_document = fitz.open(pdf_path)
+    mat = fitz.Matrix(resolution / 72.0, resolution / 72.0)
 
-    # 获取图像的RGB通道
+    images = []
+
+    for page_number in range(pdf_document.page_count):
+        page = pdf_document[page_number]
+        image = page.get_pixmap(matrix=mat)
+        images.append(image)
+        print(f"\r正在读取第 {page_number + 1} 页 {round((page_number + 1) / pdf_document.page_count * 100, 2)}%", end='', flush=True)
+
+    pdf_document.close()
+
+    return images
+
+def adjust_images(images, factor=1, contrast_factor=1):
+    processed_images = []
+
+    for image in images:
+        pil_image = Image.frombytes("RGB", [image.width, image.height], image.samples)
+        processed_image = adjust_image(pil_image, factor, contrast_factor)
+        processed_images.append(processed_image)
+        print(f"\r正在处理第 {len(processed_images)} 页 {round(len(processed_images) / len(images) * 100, 2)}%", end='', flush=True)
+
+    return processed_images
+
+def adjust_image(img, factor=1, contrast_factor=1):
     r, g, b = img.split()
-
-    # 将每个通道中的像素值乘以一个因子，以加深颜色
     r = r.point(lambda i: i * factor)
     g = g.point(lambda i: i * factor)
     b = b.point(lambda i: i * factor)
-
-    # 合并通道
     darkened_img = Image.merge('RGB', (r, g, b))
 
-    # 增加对比度
     enhancer = ImageEnhance.Contrast(darkened_img)
-    darkened_and_contrasted_img = enhancer.enhance(contrast_factor)
+    contrasted_img = enhancer.enhance(contrast_factor)
 
-    # 保存处理后的图像
-    darkened_and_contrasted_img.save(output_path)
+    return contrasted_img
 
-# 处理文件夹中的所有图片
-input_folder = 'input'  # 替换为你的图片文件夹路径
-output_folder = 'output'  # 替换为你的输出文件夹路径
 
-if not os.path.exists(output_folder):
-    os.makedirs(output_folder)
-
-for filename in os.listdir(input_folder):
-    if filename.endswith('.png') or filename.endswith('.jpg'):
-        input_path = os.path.join(input_folder, filename)
-        output_path = os.path.join(output_folder, filename)
-
-        darken_and_increase_contrast(input_path, output_path)
+if __name__ == "__main__":
+    pdf_path = "input1.pdf"
+    output_pdf_path = 'output.pdf'
+    images = pdf_to_images(pdf_path, resolution=300)
+    processed_images = adjust_images(images)
+    processed_images[0].save(output_pdf_path, save_all=True, append_images=processed_images[1:])
